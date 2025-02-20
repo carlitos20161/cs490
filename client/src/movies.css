@@ -1,0 +1,95 @@
+.movies-container {
+    text-align: center;
+    padding: 20px;
+}
+
+.back-btn {
+    background-color: #e7ddda;
+    color: #f3eeed;
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+
+.movies-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.movies-table th, .movies-table td {
+    border: 1px solid #ff5733;
+    padding: 8px;
+    text-align: left;
+}
+
+.movies-table th {
+    background-color: #ff5733;
+    font-weight: bold;
+}
+
+.pagination {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.pagination button {
+    background-color: #ff5733;
+    color: white;
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 5px;
+}
+
+.pagination button:disabled {
+    background-color: #ddd;
+    cursor: not-allowed;
+}
+
+.pagination span {
+    font-size: 16px;
+}
+
+.customer-id-input {
+    width: 200px;
+    padding: 8px;
+    font-size: 16px;
+    background-color: #000000;
+    color: white;
+    margin-right: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+.rent-btn {
+    padding: 8px 12px;
+    background-color: #ff6600;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.rent-btn:hover {
+    background-color: #e65c00;
+}
+
+
+.close-btn {
+    background-color: red;
+    color: white;
+    padding: 8px 12px;
+    border: none;
+    cursor: pointer;
+    margin-left: 10px;
+    border-radius: 5px;
+}
+.close-btn:hover {
+    background-color: darkred;
+}
