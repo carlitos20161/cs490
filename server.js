@@ -25,7 +25,7 @@ app.get("/film/:id", async (req, res) => {
                    MAX(f.release_year) AS release_year, 
                    MAX(c.name) AS category, 
                    MAX(l.name) AS language, 
-                   COUNT(i.inventory_id) AS copies
+                   SUM(CASE WHEN i.inventory_id NOT IN (SELECT inventory_id FROM rental WHERE return_date IS NULL) THEN 1 ELSE 0 END) AS copies
             FROM film f
             JOIN film_category fc ON f.film_id = fc.film_id
             JOIN category c ON fc.category_id = c.category_id
@@ -45,6 +45,7 @@ app.get("/film/:id", async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
 
 app.post("/rent-film", async (req, res) => {
     const { filmId, customerId } = req.body;
@@ -135,16 +136,41 @@ app.get("/search", async (req, res) => {
     }
 });
 
+app.get("/customers", async (req, res) => {
+    try {
+        const [customers] = await db.query(`
+            SELECT c.customer_id, 
+                   CONCAT(c.first_name, ' ', c.last_name) AS name, 
+                   c.email
+            FROM customer c
+            ORDER BY c.customer_id ASC
+        `);
 
-app.post("/rent", async (req, res) => {
+        res.json(customers);
+    } catch (error) {
+        console.error("Database error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+
+
+
+app.post("/rent-film", async (req, res) => {
     const { filmId, customerId } = req.body;
 
     try {
-       
+        const [debugBefore] = await db.query(
+            `SELECT inventory_id FROM inventory WHERE film_id = ?`,
+            [filmId]
+        );
+        console.log("Before Rental, Available Copies:", debugBefore.length);
+
         const [availability] = await db.query(
             `SELECT inventory_id FROM inventory 
             WHERE film_id = ? AND inventory_id NOT IN 
-            (SELECT inventory_id FROM rental WHERE return_date IS NULL) LIMIT 1`, 
+            (SELECT inventory_id FROM rental WHERE return_date IS NULL) 
+            LIMIT 1`, 
             [filmId]
         );
 
@@ -152,19 +178,24 @@ app.post("/rent", async (req, res) => {
             return res.status(400).json({ error: "No copies available for rent" });
         }
 
-        
         await db.query(
             `INSERT INTO rental (rental_date, inventory_id, customer_id, staff_id, return_date, last_update)
             VALUES (NOW(), ?, ?, 1, NULL, NOW())`, 
             [availability[0].inventory_id, customerId]
         );
+        const [debugAfter] = await db.query(
+            `SELECT inventory_id FROM inventory WHERE film_id = ?`,
+            [filmId]
+        );
+        console.log("After Rental, Available Copies:", debugAfter.length);
 
         res.json({ message: "Movie rented successfully!" });
     } catch (error) {
         console.error("Database error:", error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Customer invalid" });
     }
 });
+
 
 
 

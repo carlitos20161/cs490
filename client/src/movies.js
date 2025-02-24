@@ -81,10 +81,9 @@ function MoviesPage() {
         }
     };
     
-    
     const rentFilm = async () => {
         if (!customerID) {
-            alert("Please enter a Customer ID.");
+            alert("Please enter a valid Customer ID.");
             return;
         }
     
@@ -98,12 +97,18 @@ function MoviesPage() {
             const result = await response.json();
             if (response.ok) {
                 alert("Film rented successfully!");
-                setCustomerID("");  
+                setCustomerID("");
+    
+                const updatedResponse = await fetch(`http://localhost:5001/film/${selectedFilm.film_id}`);
+                const updatedData = await updatedResponse.json();
+    
+                setSelectedFilm(updatedData);
             } else {
                 alert(result.error || "Failed to rent film.");
             }
         } catch (error) {
             console.error("Error renting film:", error);
+            alert("please try again.");
         }
     };
     

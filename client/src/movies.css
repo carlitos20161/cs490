@@ -93,3 +93,22 @@
 .close-btn:hover {
     background-color: darkred;
 }
+
+.rent-message {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    font-weight: bold;
+    text-align: center;
+    font-size: 16px;
+}
+
+.rent-message.success {
+    background-color: #28a745;
+    color: white;
+}
+
+.rent-message.error {
+    background-color: #dc3545;
+    color: white;
+}

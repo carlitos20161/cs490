@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Route, Routes, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import MoviesPage from "./movies"; 
+import MoviesPage from "./movies";
+import CustomersPage from "./customers";
 import "./App.css";
 
 function App() {
@@ -9,11 +10,11 @@ function App() {
             <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/movies" element={<MoviesPage />} />
+                <Route path="/customers" element={<CustomersPage />} />
             </Routes>
         </Router>
     );
 }
-
 
 function Home() {
     const [movies, setMovies] = useState([]);
@@ -77,13 +78,16 @@ function Home() {
         <div className="container">
             <div className="header">
                 <h1 className="title">🎬 SAKILA MOVIES</h1>
-                {/*  Link to Movies */}
+                {/* Link to Movies */}
                 <Link to="/movies">
                     <button className="btn movies-btn">📽 View All Movies</button>
                 </Link>
+                {/* Link to Customers */}
+                <Link to="/customers">
+                    <button className="btn customers-btn">👤 View Customers</button>
+                </Link>
             </div>
 
-            
             <h2 className= "title">Top 5 Rented Movies</h2>
             {loading ? <p>Loading movies...</p> : (
                 <div className="movie-grid">

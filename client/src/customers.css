@@ -1,0 +1,59 @@
+.customers-container {
+    text-align: center;
+    padding: 20px;
+}
+
+.home-btn {
+    background-color: #e7ddda;
+    color: #333;
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+    margin-bottom: 20px;
+    border-radius: 5px;
+}
+
+.customers-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.customers-table th, .customers-table td {
+    border: 1px solid #ff5733;
+    padding: 8px;
+    text-align: left;
+}
+
+.customers-table th {
+    background-color: #ff5733;
+    font-weight: bold;
+    color: white;
+}
+
+.pagination {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.pagination button {
+    background-color: #ff5733;
+    color: white;
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 5px;
+}
+
+.pagination button:disabled {
+    background-color: #ddd;
+    cursor: not-allowed;
+}
+
+.pagination span {
+    font-size: 16px;
+}
