@@ -11,7 +11,8 @@ const db = mysql.createPool({
     host: "localhost",
     user: "root",
     password: "carlos2001",
-    database: "sakila"
+    database: "sakila",
+    port: 3306
 });
 
 app.get("/film/:id", async (req, res) => {
@@ -137,15 +138,39 @@ app.get("/search", async (req, res) => {
 });
 
 app.get("/customers", async (req, res) => {
-    try {
-        const [customers] = await db.query(`
-            SELECT c.customer_id, 
-                   CONCAT(c.first_name, ' ', c.last_name) AS name, 
-                   c.email
-            FROM customer c
-            ORDER BY c.customer_id ASC
-        `);
+    const { query, category } = req.query; 
 
+    let sqlQuery = `
+        SELECT c.customer_id, 
+               c.first_name, 
+               c.last_name, 
+               c.email, 
+               COUNT(r.rental_id) AS rentals
+        FROM customer c
+        LEFT JOIN rental r ON c.customer_id = r.customer_id 
+        AND r.return_date IS NULL 
+    `;
+
+    let params = [];
+
+    if (query && category) {
+        sqlQuery += " WHERE ";
+        if (category === "id") {
+            sqlQuery += "c.customer_id LIKE ?";
+            params.push(`%${query}%`);
+        } else if (category === "firstName") {
+            sqlQuery += "c.first_name LIKE ?";
+            params.push(`%${query}%`);
+        } else if (category === "lastName") {
+            sqlQuery += "c.last_name LIKE ?";
+            params.push(`%${query}%`);
+        }
+    }
+
+    sqlQuery += " GROUP BY c.customer_id ORDER BY c.customer_id ASC";
+
+    try {
+        const [customers] = await db.query(sqlQuery, params);
         res.json(customers);
     } catch (error) {
         console.error("Database error:", error);
@@ -153,8 +178,101 @@ app.get("/customers", async (req, res) => {
     }
 });
 
+app.put("/customers/:id", async (req, res) => {
+    const { id } = req.params;
+    const { firstName, lastName, email } = req.body;
 
+    if (!firstName || !lastName || !email) {
+        return res.status(400).json({ error: "All fields are required" });
+    }
 
+    try {
+        const [result] = await db.query(
+            `UPDATE customer 
+             SET first_name = ?, last_name = ?, email = ? 
+             WHERE customer_id = ?`,
+            [firstName, lastName, email, id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Customer not found" });
+        }
+
+        res.json({ message: "Customer updated successfully!" });
+    } catch (error) {
+        console.error("Database error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+app.put("/rental/:id/return", async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const [result] = await db.query(
+            `UPDATE rental SET return_date = NOW() WHERE rental_id = ? AND return_date IS NULL`,
+            [id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Rental not found or already returned" });
+        }
+
+        res.json({ message: "Rental returned successfully!" });
+    } catch (error) {
+        console.error("Database error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+app.get("/customer/:id/rentals", async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        // Fetch active rentals only
+        const [rentals] = await db.query(`
+            SELECT r.rental_id, f.title, DATE_FORMAT(r.rental_date, '%Y-%m-%d') AS rental_date
+            FROM rental r
+            JOIN inventory i ON r.inventory_id = i.inventory_id
+            JOIN film f ON i.film_id = f.film_id
+            WHERE r.customer_id = ? AND r.return_date IS NULL
+            ORDER BY r.rental_date DESC
+        `, [id]);
+
+        console.log("Active Rentals for Customer", id, rentals); // Debugging
+        res.json(rentals);
+    } catch (error) {
+        console.error("Database error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+app.get("/customer/:id/rental-history", async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const [rentals] = await db.query(`
+            SELECT r.rental_id, f.title, DATE_FORMAT(r.rental_date, '%Y-%m-%d') AS rental_date, 
+                   DATE_FORMAT(r.return_date, '%Y-%m-%d') AS return_date
+            FROM rental r
+            JOIN inventory i ON r.inventory_id = i.inventory_id
+            JOIN film f ON i.film_id = f.film_id
+            WHERE r.customer_id = ?
+            ORDER BY r.rental_date DESC
+        `, [id]);
+
+        // Separate active and past rentals
+        const activeRentals = rentals.filter(rental => rental.return_date === null);
+        const pastRentals = rentals.filter(rental => rental.return_date !== null);
+
+        console.log("Customer Rental History", { activeRentals, pastRentals }); // Debugging
+
+        res.json({ activeRentals, pastRentals });
+    } catch (error) {
+        console.error("Database error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 
 app.post("/rent-film", async (req, res) => {
     const { filmId, customerId } = req.body;
@@ -196,7 +314,46 @@ app.post("/rent-film", async (req, res) => {
     }
 });
 
+app.post("/customers", async (req, res) => {
+    const { firstName, lastName, email, storeId = 1, addressId = 1 } = req.body; // Default storeId and addressId to 1
 
+    if (!firstName || !lastName || !email) {
+        return res.status(400).json({ error: "All fields are required" });
+    }
+
+    try {
+        const [result] = await db.query(
+            `INSERT INTO customer (store_id, address_id, first_name, last_name, email, create_date, last_update)
+             VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
+            [storeId, addressId, firstName, lastName, email]
+        );
+
+        res.json({ message: "Customer added successfully!", customerId: result.insertId });
+    } catch (error) {
+        console.error("Database error:", error);
+        res.status(500).json({ error: error.sqlMessage || "Internal server error" });
+    }
+});
+
+app.put("/rental/:id/return", async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const [result] = await db.query(
+            `UPDATE rental SET return_date = NOW() WHERE rental_id = ?`,
+            [id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Rental not found or already returned" });
+        }
+
+        res.json({ message: "Rental returned successfully!" });
+    } catch (error) {
+        console.error("Database error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 
 
 app.get("/all-movies", async (req, res) => {
@@ -240,6 +397,26 @@ app.get("/actor/:actorId/top-movies", async (req, res) => {
     }
 });
 
+app.delete("/customers/:id", async (req, res) => {
+    const { id } = req.params;
+
+    try {
+       
+        await db.query("DELETE FROM rental WHERE customer_id = ?", [id]);
+
+      
+        const [result] = await db.query("DELETE FROM customer WHERE customer_id = ?", [id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Customer not found" });
+        }
+
+        res.json({ message: "Customer deleted successfully!" });
+    } catch (error) {
+        console.error("Database error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 
 app.get("/top-actors", async (req, res) => {
     try {
@@ -263,8 +440,25 @@ app.get("/top-actors", async (req, res) => {
     }
 });
 
+app.get("/customer/:id/rentals", async (req, res) => {
+    const { id } = req.params;
 
+    try {
+        const [rentals] = await db.query(`
+            SELECT r.rental_id, f.title, DATE_FORMAT(r.rental_date, '%Y-%m-%d') AS rental_date
+            FROM rental r
+            JOIN inventory i ON r.inventory_id = i.inventory_id
+            JOIN film f ON i.film_id = f.film_id
+            WHERE r.customer_id = ? AND r.return_date IS NULL
+            ORDER BY r.rental_date DESC
+        `, [id]);
 
+        res.json(rentals);
+    } catch (error) {
+        console.error("Database error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 
 app.get("/top-rented-films", async (req, res) => {
     try {
